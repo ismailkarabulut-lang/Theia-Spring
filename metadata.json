@@ -1,0 +1,6 @@
+{
+  "name": "Theia",
+  "description": "Theia — Dijital Düşünce Ortağı & Mimari Portal",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
