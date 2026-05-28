@@ -54,7 +54,6 @@ import com.example.ui.theme.*
 import com.example.viewmodel.HealthProbe
 import com.example.viewmodel.TheiaOverlay
 import com.example.viewmodel.TheiaViewModel
-import androidx.compose.foundation.lazy.rememberLazyListState
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -557,20 +556,6 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
     var showGkDrawer by remember { mutableStateOf(false) }
     var showModelDropdown by remember { mutableStateOf(false) }
 
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(currentSessionId) {
-        if (messages.isNotEmpty()) {
-            listState.scrollToItem(messages.size - 1)
-        }
-    }
-
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -693,7 +678,6 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
         Box(modifier = Modifier.weight(1f)) {
             // MAIN MESSAGE CONVERSATION FEED
             LazyColumn(
-                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
