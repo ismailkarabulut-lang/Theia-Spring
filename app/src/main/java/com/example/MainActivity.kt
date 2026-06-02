@@ -63,6 +63,8 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 class MainActivity : ComponentActivity() {
+    private var viewModel: TheiaViewModel? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -73,10 +75,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                val viewModel: TheiaViewModel = viewModel()
-                TheiaMainPortalScreen(viewModel = viewModel)
+                val vm: TheiaViewModel = viewModel()
+                viewModel = vm
+                TheiaMainPortalScreen(viewModel = vm)
             }
         }
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        viewModel?.updateInteraction()
     }
 }
 
@@ -264,9 +272,9 @@ fun TheiaMainPortalScreen(viewModel: TheiaViewModel) {
             }
         }
 
-        // ENCAPSULATED MODULAR SYSTEM OVERLAYS
+        // ENCAPSULATED MODULAR SYSTEM OVERLAYS (EXCLUDES SCREENSAVER FROM BREAKING THE LIVING STACK CONTENTS UNDERNEATH)
         androidx.compose.animation.AnimatedVisibility(
-            visible = activeOverlay != TheiaOverlay.NONE,
+            visible = activeOverlay != TheiaOverlay.NONE && activeOverlay != TheiaOverlay.SCREENSAVER,
             enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
             exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)
         ) {
@@ -283,10 +291,18 @@ fun TheiaMainPortalScreen(viewModel: TheiaViewModel) {
                     TheiaOverlay.GOREV -> GorevOverlayScreen(viewModel = viewModel)
                     TheiaOverlay.TEAM -> TeamOverlayScreen(viewModel = viewModel)
                     TheiaOverlay.TOPOLOGY -> TopologyOverlayScreen(viewModel = viewModel)
-                    TheiaOverlay.SCREENSAVER -> MatrixScreensaver(onDismiss = { viewModel.setOverlay(TheiaOverlay.NONE) })
                     else -> {}
                 }
             }
+        }
+
+        // SCREENSAVER AS A FULL SURFACE OVERLAY ON TOP OF EVERYTHING (SO PREVIOUS SCREEN AND KEYBOARD WORKSPACE REMAIN PRESERVED UNDERNEATH)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = activeOverlay == TheiaOverlay.SCREENSAVER,
+            enter = fadeIn(animationSpec = tween(500)),
+            exit = fadeOut(animationSpec = tween(500))
+        ) {
+            MatrixScreensaver(onDismiss = { viewModel.dismissScreensaver() })
         }
     }
 }
@@ -328,9 +344,10 @@ fun MatrixScreensaver(
         val fontSizePx = 36f
         val numColumns = (width / fontSizePx).toInt().coerceAtLeast(1)
         
-        val columns = remember(numColumns) {
+        val columns = remember(numColumns, width, height) {
             List(numColumns) { colIndex ->
-                val randomY = -(Math.random() * height * 1.5).toFloat()
+                // Centering the initialization of Y so several columns start instantly visible on composition start
+                val randomY = (Math.random() * height * 1.5 - height).toFloat()
                 val speed = (8f + Math.random() * 16f).toFloat()
                 val length = (8 + (Math.random() * 12).toInt())
                 val randomColor = MatrixColors.random()
@@ -658,6 +675,13 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
                         modifier = Modifier.background(Color(0xFF080516))
                     ) {
                         DropdownMenuItem(
+                            text = { Text("GEMINI", color = OrangeNeon, fontSize = 11.sp, fontFamily = FontFamily.Monospace) },
+                            onClick = {
+                                viewModel.selectModel("gemini", "#EF9F27")
+                                showModelDropdown = false
+                            }
+                        )
+                        DropdownMenuItem(
                             text = { Text("CLAUDE", color = PurpleNeon, fontSize = 11.sp, fontFamily = FontFamily.Monospace) },
                             onClick = {
                                 viewModel.selectModel("claude", "#7C6EF5")
@@ -735,7 +759,10 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
                                         "sistem durumu"
                                     ).forEach { query ->
                                         Button(
-                                            onClick = { textInput = query },
+                                            onClick = { 
+                                                textInput = query 
+                                                viewModel.updateInteraction()
+                                            },
                                             colors = ButtonDefaults.buttonColors(containerColor = SurfaceColor),
                                             border = BorderStroke(1.dp, BorderColor),
                                             shape = RoundedCornerShape(20.dp),
@@ -857,7 +884,10 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "// OTURUM GEÇMİŞİ", color = TealNeon, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
-                        IconButton(onClick = { showSessionDrawer = false }) {
+                        IconButton(onClick = { 
+                            showSessionDrawer = false 
+                            viewModel.updateInteraction()
+                        }) {
                             Icon(imageVector = Icons.Default.Close, tint = Color.White, contentDescription = "Close")
                         }
                     }
@@ -941,7 +971,10 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "// GATEKEEPER AUDIT LOGS", color = RedNeon, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
-                        IconButton(onClick = { showGkDrawer = false }) {
+                        IconButton(onClick = { 
+                            showGkDrawer = false 
+                            viewModel.updateInteraction()
+                        }) {
                             Icon(imageVector = Icons.Default.Close, tint = Color.White, contentDescription = "Close")
                         }
                     }
@@ -1000,7 +1033,10 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         IconButton(
-                            onClick = { viewModel.startVoiceRecording() },
+                            onClick = { 
+                                viewModel.startVoiceRecording() 
+                                viewModel.updateInteraction()
+                            },
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(RoundedCornerShape(8.dp))
@@ -1011,7 +1047,10 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
                         }
 
                         IconButton(
-                            onClick = { if (!textInput.startsWith("🌍")) textInput = "🌍 $textInput" },
+                            onClick = { 
+                                if (!textInput.startsWith("🌍")) textInput = "🌍 $textInput" 
+                                viewModel.updateInteraction()
+                            },
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(RoundedCornerShape(8.dp))
@@ -1022,7 +1061,10 @@ fun ChatOverlayScreen(viewModel: TheiaViewModel) {
                         }
 
                         IconButton(
-                            onClick = { showGkDrawer = !showGkDrawer },
+                            onClick = { 
+                                showGkDrawer = !showGkDrawer 
+                                viewModel.updateInteraction()
+                            },
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(RoundedCornerShape(8.dp))

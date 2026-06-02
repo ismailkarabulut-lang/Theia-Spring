@@ -65,10 +65,10 @@ class TheiaViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedSessionId = MutableStateFlow("SES_A56F")
     val selectedSessionId: StateFlow<String> = _selectedSessionId.asStateFlow()
 
-    private val _selectedModel = MutableStateFlow("claude")
+    private val _selectedModel = MutableStateFlow("gemini")
     val selectedModel: StateFlow<String> = _selectedModel.asStateFlow()
 
-    private val _selectedModelColor = MutableStateFlow("#7C6EF5")
+    private val _selectedModelColor = MutableStateFlow("#EF9F27")
     val selectedModelColor: StateFlow<String> = _selectedModelColor.asStateFlow()
 
     // Local lists collected from Room
@@ -127,6 +127,8 @@ class TheiaViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastInteractionTime = MutableStateFlow(System.currentTimeMillis())
     val lastInteractionTime: StateFlow<Long> = _lastInteractionTime.asStateFlow()
 
+    private var previousOverlay = TheiaOverlay.NONE
+
     fun updateInteraction() {
         _lastInteractionTime.value = System.currentTimeMillis()
     }
@@ -140,7 +142,19 @@ class TheiaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setOverlay(overlay: TheiaOverlay) {
         viewModelScope.launch {
+            if (overlay == TheiaOverlay.SCREENSAVER) {
+                if (_activeOverlay.value != TheiaOverlay.SCREENSAVER) {
+                    previousOverlay = _activeOverlay.value
+                }
+            }
             _activeOverlay.value = overlay
+            updateInteraction()
+        }
+    }
+
+    fun dismissScreensaver() {
+        viewModelScope.launch {
+            _activeOverlay.value = previousOverlay
             updateInteraction()
         }
     }
@@ -487,6 +501,7 @@ class TheiaViewModel(application: Application) : AndroidViewModel(application) {
             val random = Random()
             val probes = listOf(
                 HealthProbe("soul", "Soul API", "ana agent · chat · memory", "ok", 15 + random.nextInt(15)),
+                HealthProbe("gemini", "Gemini API", "LLM · Google Cloud", "ok", 30 + random.nextInt(15)),
                 HealthProbe("claude", "Claude API", "LLM · Anthropic", "ok", 120 + random.nextInt(40)),
                 HealthProbe("deepseek", "DeepSeek API", "LLM · deepseek-chat", "ok", 180 + random.nextInt(60)),
                 HealthProbe("memory", "Memory · FTS", "hafıza · full-text search", "ok", 5 + random.nextInt(10)),
@@ -583,8 +598,8 @@ class TheiaViewModel(application: Application) : AndroidViewModel(application) {
             // 3. Past session
             repository.insertSession(ChatSession(
                 id = "SES_A56F",
-                model = "claude",
-                modelColor = "#7C6EF5",
+                model = "gemini",
+                modelColor = "#EF9F27",
                 ts = System.currentTimeMillis() - 10000000,
                 preview = "Sorunsuz port çalışması, Kaptan."
             ))
@@ -594,7 +609,7 @@ class TheiaViewModel(application: Application) : AndroidViewModel(application) {
                 role = "user",
                 content = "Theia, native Android APK port durumunu kontrol et.",
                 time = "11:02:15",
-                model = "claude"
+                model = "gemini"
             ))
 
             repository.insertMessage(ChatMessage(
@@ -602,7 +617,7 @@ class TheiaViewModel(application: Application) : AndroidViewModel(application) {
                 role = "assistant",
                 content = "Dönüşüm kusursuz ilerliyor, Kaptan. UI bileşenleri Material 3 ile birebir uyarlandı. Persona Snapshot ve diagnostics modülleri kullanıma hazır.",
                 time = "11:02:40",
-                model = "claude"
+                model = "gemini"
             ))
         }
     }
